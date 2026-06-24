@@ -67,7 +67,7 @@ Luego **Administración → Notificaciones**.
 
 | Repo | Rol |
 |------|-----|
-| [moodle_proctor](https://github.com/Johnrivera7/moodle_proctor) | Núcleo, SFS, informes |
+| [moodle_proctor](https://github.com/Johnrivera7/moodle_proctor) | Núcleo, almacenamiento, informes |
 | **moodle_quizaccess_proctor** | ← Este plugin |
 | [moodle_block_proctor](https://github.com/Johnrivera7/moodle_block_proctor) | Bloque enrollment |
 | [moodle_proctor_python](https://github.com/Johnrivera7/moodle_proctor_python) | Análisis facial |
