@@ -5,12 +5,14 @@
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Branch](https://img.shields.io/badge/Branch-MOODLE__52-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_52)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
-[![Version](https://img.shields.io/badge/Version-1.1.0-informational?style=flat-square)](version.php)
+[![Version](https://img.shields.io/badge/Version-1.4.0-informational?style=flat-square)](version.php)
 
-Regla de acceso a cuestionarios: webcam, preflight de consentimiento e integración con el núcleo de supervisión.
+Regla de acceso a cuestionarios: webcam, preflight de consentimiento, capturas periódicas e integración con verificación de identidad del núcleo.
 
 | | |
 |---|---|
+| **Autor** | [John Rivera](https://github.com/Johnrivera7) |
+| **Contacto** | [johnriveragonzalez7@gmail.com](mailto:johnriveragonzalez7@gmail.com) |
 | **Componente** | `quizaccess_moodle_proctor` |
 | **Instalación** | `mod/quiz/accessrule/moodle_proctor/` |
 | **Repositorio** | https://github.com/Johnrivera7/moodle_quizaccess_proctor |
@@ -26,7 +28,7 @@ Regla de acceso a cuestionarios: webcam, preflight de consentimiento e integraci
 |-----------|---------|
 | Moodle | **5.2+** (`2026042000`) |
 | PHP | **8.5+** |
-| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) **MOODLE_52** |
+| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) **v1.4.0+** |
 
 ---
 
@@ -49,7 +51,11 @@ git clone -b MOODLE_52 https://github.com/Johnrivera7/moodle_quizaccess_proctor.
 |--------|-------------|
 | **Enable proctoring** | Activa supervisión |
 | **Require webcam** | Cámara activa durante intento |
-| **Require browser extension** | Exige extensión Chromium |
+| **Require browser extension** | Exige extensión Chromium (opcional, desactivada por defecto en el núcleo) |
+
+El estudiante debe haber completado la **verificación de identidad** (cédula + rostro) antes del intento si el enrollment está habilitado en el núcleo.
+
+Ajustes del plugin: **Administración → Cuestionarios → Moodle Proctor quiz access rule**.
 
 ---
 
@@ -70,3 +76,8 @@ git clone -b MOODLE_52 https://github.com/Johnrivera7/moodle_quizaccess_proctor.
 ## Licencia
 
 GPL-3.0+ — [LICENSE](LICENSE)
+
+## Soporte
+
+- **Autor:** [John Rivera](https://github.com/Johnrivera7) · [johnriveragonzalez7@gmail.com](mailto:johnriveragonzalez7@gmail.com)
+- **Issues:** https://github.com/Johnrivera7/moodle_quizaccess_proctor/issues
