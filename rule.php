@@ -124,6 +124,7 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $config = local_moodle_proctor_get_config();
         $interval = max(10, (int) $config->camshotinterval);
         $attemptid = optional_param('attempt', 0, PARAM_INT);
+        $page->requires->css('/local/moodle_proctor/styles/proctor_live.css');
         $page->requires->js_call_amd('quizaccess_moodle_proctor/proctor', 'init', [
             $attemptid,
             (int) $page->cm->id,
@@ -131,6 +132,7 @@ class quizaccess_moodle_proctor extends access_rule_base {
             (int) $config->camshotheight,
             $interval * 1000,
             !empty($this->quizobj->get_quiz()->requireextension),
+            get_string('livealert_title', 'local_moodle_proctor'),
         ]);
     }
 }
