@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Branch](https://img.shields.io/badge/Branch-MOODLE__52-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_52)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
-[![Version](https://img.shields.io/badge/Version-1.4.1-informational?style=flat-square)](version.php)
+[![Version](https://img.shields.io/badge/Version-1.5.2-informational?style=flat-square)](version.php)
 
-Regla de acceso a cuestionarios: webcam, preflight de consentimiento, capturas periódicas e integración con verificación de identidad del núcleo.
+Regla de acceso a cuestionarios: webcam, capturas periódicas, **alertas en vivo** al estudiante (rostros, pestaña, copiar) e integración con verificación de identidad del núcleo.
 
 | | |
 |---|---|
@@ -28,7 +28,7 @@ Regla de acceso a cuestionarios: webcam, preflight de consentimiento, capturas p
 |-----------|---------|
 | Moodle | **5.2+** (`2026042000`) |
 | PHP | **8.5+** |
-| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) **v1.4.1+** |
+| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) **v1.5.2+** |
 
 ---
 
@@ -54,6 +54,8 @@ git clone -b MOODLE_52 https://github.com/Johnrivera7/moodle_quizaccess_proctor.
 | **Require browser extension** | Exige extensión Chromium (opcional, desactivada por defecto en el núcleo) |
 
 El estudiante debe haber completado la **verificación de identidad** (cédula + rostro) antes del intento si el enrollment está habilitado en el núcleo.
+
+Durante el intento, `proctor.js` muestra **banners de alerta** con miniatura y cajas faciales cuando el análisis Python o el navegador detectan incidencias.
 
 Ajustes del plugin: **Administración → Cuestionarios → Moodle Proctor quiz access rule**.
 
