@@ -2,6 +2,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 /**
+ * Quiz access rule admin settings (included from mod/quiz/settings.php).
+ *
  * @package    quizaccess_moodle_proctor
  * @copyright  2026 John Rivera
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -9,10 +11,7 @@ defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->dirroot . '/local/moodle_proctor/lib.php');
 
-$settings = new admin_settingpage('quizaccess_moodle_proctor_settings', get_string('pluginname', 'quizaccess_moodle_proctor'));
-if ($ADMIN->fulltree) {
-    $ADMIN->add('modsettingsquiz', $settings);
-
+if ($hassiteconfig && $ADMIN->fulltree) {
     local_moodle_proctor_add_author_settings(
         $settings,
         'quizaccess_moodle_proctor',
