@@ -18,5 +18,9 @@ function xmldb_quizaccess_moodle_proctor_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026062561, 'quizaccess', 'moodle_proctor');
     }
 
+    if ($oldversion < 2026062562) {
+        upgrade_plugin_savepoint(true, 2026062562, 'quizaccess', 'moodle_proctor');
+    }
+
     return true;
 }

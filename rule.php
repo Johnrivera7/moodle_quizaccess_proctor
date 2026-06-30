@@ -7,6 +7,9 @@
 
 defined('MOODLE_INTERNAL') || die();
 
+global $CFG;
+require_once($CFG->dirroot . '/local/moodle_proctor/lib.php');
+
 use mod_quiz\local\access_rule_base;
 use mod_quiz\form\preflight_check_form;
 use mod_quiz\quiz_settings;
