@@ -1,9 +1,9 @@
 # Moodle Proctor — Quiz Access Rule
 
-[![Moodle](https://img.shields.io/badge/Moodle-5.2%2B-orange?style=flat-square&logo=moodle)](https://moodle.org)
-[![PHP](https://img.shields.io/badge/PHP-8.5%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
+[![Moodle](https://img.shields.io/badge/Moodle-5.0%2B-orange?style=flat-square&logo=moodle)](https://moodle.org)
+[![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
-[![Branch](https://img.shields.io/badge/Branch-MOODLE__52-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_52)
+[![Branch](https://img.shields.io/badge/Branch-MOODLE__50-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_50)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
 [![Version](https://img.shields.io/badge/Version-1.5.2-informational?style=flat-square)](version.php)
 
@@ -16,9 +16,9 @@ Regla de acceso a cuestionarios: webcam, capturas periódicas, **alertas en vivo
 | **Componente** | `quizaccess_moodle_proctor` |
 | **Instalación** | `mod/quiz/accessrule/moodle_proctor/` |
 | **Repositorio** | https://github.com/Johnrivera7/moodle_quizaccess_proctor |
-| **Rama** | **`MOODLE_52`** — Moodle 5.2+ / PHP 8.5+ |
+| **Rama** | **`MOODLE_50`** — Moodle 5.0 / 5.1 / PHP 8.2+ |
 
-> Moodle 4.5: rama [`MOODLE_45`](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_45)
+> Moodle **5.2+**: rama [`MOODLE_52`](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_52). Moodle 4.5: [`MOODLE_45`](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_45).
 
 ---
 
@@ -26,9 +26,9 @@ Regla de acceso a cuestionarios: webcam, capturas periódicas, **alertas en vivo
 
 | Requisito | Versión |
 |-----------|---------|
-| Moodle | **5.2+** (`2026042000`) |
+| Moodle | **5.2+** (`2025041400`) |
 | PHP | **8.5+** |
-| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) **v1.5.2+** |
+| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_50) **v1.5.2+** |
 
 ---
 
@@ -36,7 +36,7 @@ Regla de acceso a cuestionarios: webcam, capturas periódicas, **alertas en vivo
 
 ```bash
 cd /path/to/moodle/mod/quiz/accessrule
-git clone -b MOODLE_52 https://github.com/Johnrivera7/moodle_quizaccess_proctor.git moodle_proctor
+git clone -b MOODLE_50 https://github.com/Johnrivera7/moodle_quizaccess_proctor.git moodle_proctor
 ```
 
 **Administración → Notificaciones** (después de instalar `local_moodle_proctor`).
@@ -61,17 +61,17 @@ Ajustes del plugin: **Administración → Cuestionarios → Moodle Proctor quiz 
 
 ---
 
-## Suite MOODLE_52
+## Suite MOODLE_50
 
 | Repo | Rol |
 |------|-----|
-| [moodle_proctor](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_52) | Núcleo |
+| [moodle_proctor](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_50) | Núcleo |
 | **moodle_quizaccess_proctor** | ← Este plugin |
-| [moodle_block_proctor](https://github.com/Johnrivera7/moodle_block_proctor/tree/MOODLE_52) | Bloque |
+| [moodle_block_proctor](https://github.com/Johnrivera7/moodle_block_proctor/tree/MOODLE_50) | Bloque |
 | [moodle_proctor_python](https://github.com/Johnrivera7/moodle_proctor_python/tree/MOODLE_52) | Python |
 | [moodle_proctor_extension](https://github.com/Johnrivera7/moodle_proctor_extension/tree/MOODLE_52) | Extensión |
 
-[Guía de pruebas](https://github.com/Johnrivera7/moodle_proctor/blob/MOODLE_52/TESTING.md)
+[Guía de pruebas](https://github.com/Johnrivera7/moodle_proctor/blob/MOODLE_50/TESTING.md)
 
 ---
 
