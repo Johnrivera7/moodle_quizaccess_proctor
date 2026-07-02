@@ -127,6 +127,10 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $config = local_moodle_proctor_get_config();
         $interval = max(10, (int) $config->camshotinterval);
         $attemptid = optional_param('attempt', 0, PARAM_INT);
+
+        $identityenabled = !empty($config->requirequizidentity)
+            && \local_moodle_proctor\aws_rekognition::is_configured();
+
         $page->requires->css('/local/moodle_proctor/styles/proctor_live.css');
         $page->requires->js_call_amd('quizaccess_moodle_proctor/proctor', 'init', [
             $attemptid,
@@ -136,6 +140,17 @@ class quizaccess_moodle_proctor extends access_rule_base {
             $interval * 1000,
             !empty($this->quizobj->get_quiz()->requireextension),
             get_string('livealert_title', 'local_moodle_proctor'),
+            [
+                'enabled' => $identityenabled,
+                'block' => !empty($config->blockquizidentity),
+                'checking' => get_string('identity_verifying', 'quizaccess_moodle_proctor'),
+                'ok' => get_string('identity_verified', 'quizaccess_moodle_proctor'),
+                'mismatch' => get_string('rekognition_quiz_mismatch', 'local_moodle_proctor'),
+                'blocked' => get_string('rekognition_quiz_blocked', 'local_moodle_proctor'),
+                'retry' => get_string('identity_retry', 'quizaccess_moodle_proctor'),
+                'leave' => get_string('identity_leave', 'quizaccess_moodle_proctor'),
+                'courseurl' => (new moodle_url('/course/view.php', ['id' => (int) $page->cm->course]))->out(false),
+            ],
         ]);
     }
 }

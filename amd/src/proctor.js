@@ -10,6 +10,8 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     var captureWidth = 640;
     var captureHeight = 480;
     var alertTitle = 'Proctoring alert';
+    var identityConfig = null;
+    var identityDone = false;
 
     function parseFaces(facesjson) {
         try {
@@ -131,6 +133,105 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
+    function captureData(video, width, height) {
+        var canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(video, 0, 0, width, height);
+        return canvas.toDataURL('image/jpeg', 0.85);
+    }
+
+    function showIdentityOverlay(message, blocking) {
+        var existing = document.getElementById('proctor-identity-overlay');
+        if (existing) {
+            existing.remove();
+        }
+        var overlay = document.createElement('div');
+        overlay.id = 'proctor-identity-overlay';
+        overlay.className = 'proctor-identity-overlay' + (blocking ? ' blocking' : '');
+        overlay.setAttribute('role', 'alertdialog');
+
+        var box = document.createElement('div');
+        box.className = 'proctor-identity-box';
+        var text = document.createElement('p');
+        text.className = 'proctor-identity-message';
+        text.textContent = message;
+        box.appendChild(text);
+
+        if (blocking) {
+            var retry = document.createElement('button');
+            retry.type = 'button';
+            retry.className = 'btn btn-primary me-2';
+            retry.textContent = (identityConfig && identityConfig.retry) || 'Retry';
+            retry.addEventListener('click', function() {
+                overlay.remove();
+                identityDone = false;
+                runIdentityCheck();
+            });
+            var leave = document.createElement('button');
+            leave.type = 'button';
+            leave.className = 'btn btn-outline-light';
+            leave.textContent = (identityConfig && identityConfig.leave) || 'Leave';
+            leave.addEventListener('click', function() {
+                window.location.href = (identityConfig && identityConfig.courseurl) || '/';
+            });
+            box.appendChild(retry);
+            box.appendChild(leave);
+        }
+        overlay.appendChild(box);
+        document.body.appendChild(overlay);
+        return overlay;
+    }
+
+    function runIdentityCheck() {
+        if (!identityConfig || !identityConfig.enabled || identityDone) {
+            return;
+        }
+        var video = document.getElementById('proctor-monitor-video');
+        if (!video || !stream || !video.videoWidth) {
+            // Camera not ready yet; retry shortly.
+            setTimeout(runIdentityCheck, 1500);
+            return;
+        }
+        identityDone = true;
+        var image = captureData(video, captureWidth, captureHeight);
+        var overlay = showIdentityOverlay(identityConfig.checking, false);
+
+        Ajax.call([{
+            methodname: 'local_moodle_proctor_verify_quiz_identity',
+            args: {attemptid: attemptid, cmid: cmid, image: image}
+        }])[0].then(function(resp) {
+            if (overlay) {
+                overlay.remove();
+            }
+            if (!resp || !resp.enabled || !resp.checked) {
+                return;
+            }
+            if (resp.matched) {
+                Notification.addNotification({
+                    message: resp.message || identityConfig.ok,
+                    type: 'success'
+                });
+                return;
+            }
+            // Mismatch: always warn; block if configured.
+            if (identityConfig.block) {
+                showIdentityOverlay(identityConfig.blocked, true);
+            } else {
+                showLiveAlert({
+                    livealert: true,
+                    alertseverity: 'critical',
+                    alertmessage: resp.message || identityConfig.mismatch,
+                    facesjson: '[]'
+                }, image);
+            }
+        }).catch(function() {
+            if (overlay) {
+                overlay.remove();
+            }
+        });
+    }
+
     function captureAndUpload(width, height) {
         var video = document.getElementById('proctor-monitor-video');
         if (!video || !stream) {
@@ -161,12 +262,13 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
-    function startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle) {
+    function startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity) {
         attemptid = attemptId;
         cmid = cmId;
         captureWidth = width;
         captureHeight = height;
         alertTitle = liveAlertTitle || alertTitle;
+        identityConfig = identity || null;
 
         if (!navigator.mediaDevices) {
             Notification.addNotification({message: 'Webcam not supported', type: 'error'});
@@ -189,6 +291,7 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             document.body.appendChild(container);
 
             captureAndUpload(width, height);
+            runIdentityCheck();
             timer = setInterval(function() {
                 captureAndUpload(width, height);
             }, intervalMs);
@@ -224,8 +327,8 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     }
 
     return {
-        init: function(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle) {
-            startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle);
+        init: function(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity) {
+            startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity);
         }
     };
 });
