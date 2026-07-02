@@ -15,5 +15,9 @@ $string['preflight_consentrequired'] = 'Debe aceptar el consentimiento de superv
 
 $string['cameralost'] = 'Se perdió el acceso a la webcam. Vuelva a habilitar la cámara.';
 $string['tabhidden'] = 'La pestaña del examen quedó oculta. Esta incidencia fue registrada.';
+$string['identity_verifying'] = 'Verificando su identidad con la cédula registrada…';
+$string['identity_verified'] = 'Identidad verificada correctamente.';
+$string['identity_retry'] = 'Reintentar';
+$string['identity_leave'] = 'Salir del cuestionario';
 $string['settings_info_heading'] = 'Configuración';
 $string['settings_info_desc'] = 'La configuración principal de supervisión, almacenamiento, RUT y verificación de identidad está en <a href="/admin/settings.php?section=local_moodle_proctor_settings">Plugins locales → Moodle Proctor</a>.';

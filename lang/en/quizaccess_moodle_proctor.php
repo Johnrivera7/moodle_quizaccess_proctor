@@ -15,5 +15,9 @@ $string['preflight_consentrequired'] = 'You must accept the monitoring consent t
 
 $string['cameralost'] = 'Webcam access was lost. Please re-enable your camera.';
 $string['tabhidden'] = 'The exam tab was hidden. This incident has been logged.';
+$string['identity_verifying'] = 'Verifying your identity against the registered ID...';
+$string['identity_verified'] = 'Identity verified successfully.';
+$string['identity_retry'] = 'Retry';
+$string['identity_leave'] = 'Leave the quiz';
 $string['settings_info_heading'] = 'Configuration';
 $string['settings_info_desc'] = 'Main proctoring, storage, RUT and identity settings are in <a href="/admin/settings.php?section=local_moodle_proctor_settings">Local plugins → Moodle Proctor</a>.';
