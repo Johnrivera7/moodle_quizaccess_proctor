@@ -123,23 +123,29 @@ class quizaccess_moodle_proctor extends access_rule_base {
     }
 
     public function add_preflight_check_form_fields(preflight_check_form $quizform, MoodleQuickForm $mform, $attemptid): void {
+        $blockmessage = $this->get_enrollment_block_message();
+        if ($blockmessage) {
+            $mform->addElement('static', 'proctorenrollmentblock', '', $blockmessage);
+            return;
+        }
+
         $config = local_moodle_proctor_get_config();
         $mform->addElement('static', 'proctorconsentstatic', '', format_text(
             $config->consenttext ?: get_string('settings_consenttext_default', 'local_moodle_proctor'),
             FORMAT_HTML
         ));
         $mform->addElement('advcheckbox', 'proctorconsent', get_string('preflight_consent', 'quizaccess_moodle_proctor'));
-        $mform->addRule('proctorconsent', get_string('required'), 'required', null, 'client');
     }
 
     public function validate_preflight_check($data, $files, $errors, $attemptid): array {
-        if (empty($data['proctorconsent'])) {
-            $errors['proctorconsent'] = get_string('preflight_consentrequired', 'quizaccess_moodle_proctor');
-        }
-
         $blockmessage = $this->get_enrollment_block_message();
         if ($blockmessage) {
-            $errors['proctorconsent'] = get_string('needenrollment_short', 'quizaccess_moodle_proctor');
+            $errors['proctorenrollmentblock'] = get_string('needenrollment_short', 'quizaccess_moodle_proctor');
+            return $errors;
+        }
+
+        if (empty($data['proctorconsent'])) {
+            $errors['proctorconsent'] = get_string('preflight_consentrequired', 'quizaccess_moodle_proctor');
         }
 
         return $errors;
