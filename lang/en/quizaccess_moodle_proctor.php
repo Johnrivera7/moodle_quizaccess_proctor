@@ -10,10 +10,15 @@ $string['proctoringenabled'] = 'Proctoring is enabled for this quiz';
 $string['requirewebcam'] = 'Require webcam during attempt';
 $string['requireextension'] = 'Require browser extension during attempt';
 $string['needenrollment'] = 'You must complete proctoring enrollment before this quiz. <a href="{$a}">Complete enrollment</a>';
+$string['needenrollment_short'] = 'You must complete proctoring enrollment before this quiz.';
 $string['preflight_consent'] = 'I consent to webcam monitoring during this attempt';
 $string['preflight_consentrequired'] = 'You must accept the monitoring consent to continue';
 
 $string['cameralost'] = 'Webcam access was lost. Please re-enable your camera.';
+$string['focuslost'] = 'The exam window lost focus. Keep this tab active during the attempt.';
+$string['uploadfailed'] = 'Proctoring upload failed. If the problem persists, contact your teacher.';
+$string['cameradenied'] = 'Camera permission is required for this proctored quiz.';
+$string['cameranotsupported'] = 'Your browser does not support webcam access.';
 $string['tabhidden'] = 'The exam tab was hidden. This incident has been logged.';
 $string['identity_verifying'] = 'Verifying your identity against the registered ID...';
 $string['identity_verified'] = 'Identity verified successfully.';
