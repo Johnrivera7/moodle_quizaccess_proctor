@@ -87,19 +87,35 @@ class quizaccess_moodle_proctor extends access_rule_base {
         return $lines;
     }
 
-    public function prevent_access(): string {
+    /**
+     * Enrollment block message for students who have not completed identity verification.
+     *
+     * @return string|false
+     */
+    protected function get_enrollment_block_message(): string|false {
         global $USER;
 
-        $config = local_moodle_proctor_get_config();
-        if (!empty($config->requireenrollment)) {
-            $courseid = $this->quizobj->get_course()->id;
-            $enrollment = new \local_moodle_proctor\enrollment_manager();
-            if (!$enrollment->is_complete($USER->id, $courseid)) {
-                $url = new moodle_url('/local/moodle_proctor/enrollment.php', ['courseid' => $courseid]);
-                return get_string('needenrollment', 'quizaccess_moodle_proctor', $url->out());
-            }
+        $courseid = (int) $this->quizobj->get_course()->id;
+        if (!local_moodle_proctor_user_requires_enrollment((int) $USER->id, $courseid)) {
+            return false;
         }
-        return '';
+
+        $enrollment = new \local_moodle_proctor\enrollment_manager();
+        if ($enrollment->is_complete((int) $USER->id, $courseid)) {
+            return false;
+        }
+
+        $returnurl = new moodle_url('/mod/quiz/view.php', ['id' => $this->quizobj->get_cmid()]);
+        $url = local_moodle_proctor_enrollment_url($courseid, $returnurl);
+        return get_string('needenrollment', 'quizaccess_moodle_proctor', $url->out(false));
+    }
+
+    public function prevent_access(): string|false {
+        return $this->get_enrollment_block_message() ?: false;
+    }
+
+    public function prevent_new_attempt($numprevattempts, $lastattempt): string|false {
+        return $this->get_enrollment_block_message() ?: false;
     }
 
     public function is_preflight_check_required($attemptid): bool {
@@ -120,13 +136,27 @@ class quizaccess_moodle_proctor extends access_rule_base {
         if (empty($data['proctorconsent'])) {
             $errors['proctorconsent'] = get_string('preflight_consentrequired', 'quizaccess_moodle_proctor');
         }
+
+        $blockmessage = $this->get_enrollment_block_message();
+        if ($blockmessage) {
+            $errors['proctorconsent'] = get_string('needenrollment_short', 'quizaccess_moodle_proctor');
+        }
+
         return $errors;
     }
 
     public function setup_attempt_page($page): void {
+        if ($page->pagetype !== 'mod-quiz-attempt') {
+            return;
+        }
+
+        $attemptid = optional_param('attempt', 0, PARAM_INT);
+        if ($attemptid <= 0) {
+            return;
+        }
+
         $config = local_moodle_proctor_get_config();
         $interval = max(10, (int) $config->camshotinterval);
-        $attemptid = optional_param('attempt', 0, PARAM_INT);
 
         $identityenabled = !empty($config->requirequizidentity)
             && \local_moodle_proctor\aws_rekognition::is_configured();
@@ -150,6 +180,12 @@ class quizaccess_moodle_proctor extends access_rule_base {
                 'retry' => get_string('identity_retry', 'quizaccess_moodle_proctor'),
                 'leave' => get_string('identity_leave', 'quizaccess_moodle_proctor'),
                 'courseurl' => (new moodle_url('/course/view.php', ['id' => (int) $page->cm->course]))->out(false),
+            ],
+            [
+                'focuslost' => get_string('focuslost', 'quizaccess_moodle_proctor'),
+                'uploadfailed' => get_string('uploadfailed', 'quizaccess_moodle_proctor'),
+                'cameradenied' => get_string('cameradenied', 'quizaccess_moodle_proctor'),
+                'cameranotsupported' => get_string('cameranotsupported', 'quizaccess_moodle_proctor'),
             ],
         ]);
     }

@@ -12,6 +12,14 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     var alertTitle = 'Proctoring alert';
     var identityConfig = null;
     var identityDone = false;
+    var incidentMessages = {};
+
+    function incidentLabel(type, fallback) {
+        if (incidentMessages && incidentMessages[type]) {
+            return incidentMessages[type];
+        }
+        return fallback || type;
+    }
 
     function parseFaces(facesjson) {
         try {
@@ -111,10 +119,13 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
 
     function logIncident(type, severity, detail) {
         if (!sessionId) {
+            if (severity === 'info') {
+                return;
+            }
             showLiveAlert({
                 livealert: true,
                 alertseverity: severity || 'warning',
-                alertmessage: detail || type,
+                alertmessage: detail || incidentLabel(type, type),
                 facesjson: '[]'
             }, null);
             return;
@@ -256,22 +267,30 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             handleAlertResponse(response, image);
         }).catch(function() {
             Notification.addNotification({
-                message: 'Proctoring upload failed',
+                message: incidentLabel('uploadfailed', 'Proctoring upload failed'),
                 type: 'error'
             });
         });
     }
 
-    function startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity) {
+    function startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents) {
+        if (!attemptId || attemptId <= 0) {
+            return;
+        }
+
         attemptid = attemptId;
         cmid = cmId;
         captureWidth = width;
         captureHeight = height;
         alertTitle = liveAlertTitle || alertTitle;
         identityConfig = identity || null;
+        incidentMessages = incidents || {};
 
         if (!navigator.mediaDevices) {
-            Notification.addNotification({message: 'Webcam not supported', type: 'error'});
+            Notification.addNotification({
+                message: incidentLabel('cameranotsupported', 'Webcam not supported'),
+                type: 'error'
+            });
             return;
         }
 
@@ -296,17 +315,23 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
                 captureAndUpload(width, height);
             }, intervalMs);
         }).catch(function() {
-            Notification.addNotification({message: 'Camera permission required', type: 'error'});
+            Notification.addNotification({
+                message: incidentLabel('cameradenied', 'Camera permission required'),
+                type: 'error'
+            });
         });
 
         document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
+            if (document.hidden && sessionId) {
                 logIncident('tab_hidden', 'critical');
             }
         });
 
         window.addEventListener('blur', function() {
-            logIncident('focus_lost', 'info');
+            if (!sessionId) {
+                return;
+            }
+            logIncident('focus_lost', 'info', incidentLabel('focuslost', 'Focus lost'));
         });
 
         document.addEventListener('copy', function(e) {
@@ -327,8 +352,8 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     }
 
     return {
-        init: function(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity) {
-            startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity);
+        init: function(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents) {
+            startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents);
         }
     };
 });
