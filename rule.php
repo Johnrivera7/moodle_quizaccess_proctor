@@ -164,8 +164,7 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $config = local_moodle_proctor_get_config();
         $interval = max(10, (int) $config->camshotinterval);
 
-        $identityenabled = !empty($config->requirequizidentity)
-            && \local_moodle_proctor\aws_rekognition::is_configured();
+        $identityenabled = !empty($config->requirequizidentity);
 
         $page->requires->css('/local/moodle_proctor/styles/proctor_live.css');
         $page->requires->js_call_amd('quizaccess_moodle_proctor/proctor', 'init', [
@@ -186,6 +185,12 @@ class quizaccess_moodle_proctor extends access_rule_base {
                 'retry' => get_string('identity_retry', 'quizaccess_moodle_proctor'),
                 'leave' => get_string('identity_leave', 'quizaccess_moodle_proctor'),
                 'courseurl' => (new moodle_url('/course/view.php', ['id' => (int) $page->cm->course]))->out(false),
+                'fullscreen' => get_string('livealert_fullscreen_exit', 'local_moodle_proctor'),
+                'displays' => get_string('livealert_multiple_displays', 'local_moodle_proctor'),
+                'screenstopped' => get_string('livealert_screen_share_stopped', 'local_moodle_proctor'),
+                'audio' => get_string('livealert_audio_detected', 'local_moodle_proctor'),
+                'returnfullscreen' => get_string('lock_return_fullscreen', 'local_moodle_proctor'),
+                'sharescreen' => get_string('lock_share_screen', 'local_moodle_proctor'),
             ],
             [
                 'focuslost' => get_string('focuslost', 'quizaccess_moodle_proctor'),

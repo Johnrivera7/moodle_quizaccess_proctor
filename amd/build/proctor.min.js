@@ -12,7 +12,12 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     var alertTitle = 'Proctoring alert';
     var identityConfig = null;
     var identityDone = false;
+    var identityBusy = false;
+    var identityTimer = null;
     var incidentMessages = {};
+    var screenStream = null;
+    var audioContext = null;
+    var lockHeld = false;
 
     function incidentLabel(type, fallback) {
         if (incidentMessages && incidentMessages[type]) {
@@ -113,6 +118,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             if (response.sessionid) {
                 sessionId = response.sessionid;
             }
+            if (response.alerttype === 'identity_mismatch' && identityConfig && identityConfig.block) {
+                showIdentityOverlay(identityConfig.blocked || response.alertmessage, true);
+                return;
+            }
             showLiveAlert(response, thumbDataUrl);
         }
     }
@@ -194,24 +203,29 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return overlay;
     }
 
-    function runIdentityCheck() {
-        if (!identityConfig || !identityConfig.enabled || identityDone) {
+    function runIdentityCheck(silent) {
+        if (!identityConfig || !identityConfig.enabled || identityBusy) {
+            return;
+        }
+        if (identityDone && !silent) {
             return;
         }
         var video = document.getElementById('proctor-monitor-video');
         if (!video || !stream || !video.videoWidth) {
-            // Camera not ready yet; retry shortly.
-            setTimeout(runIdentityCheck, 1500);
+            setTimeout(function() {
+                runIdentityCheck(silent);
+            }, 1500);
             return;
         }
-        identityDone = true;
+        identityBusy = true;
         var image = captureData(video, captureWidth, captureHeight);
-        var overlay = showIdentityOverlay(identityConfig.checking, false);
+        var overlay = silent ? null : showIdentityOverlay(identityConfig.checking, false);
 
         Ajax.call([{
             methodname: 'local_moodle_proctor_verify_quiz_identity',
             args: {attemptid: attemptid, cmid: cmid, image: image}
         }])[0].then(function(resp) {
+            identityBusy = false;
             if (overlay) {
                 overlay.remove();
             }
@@ -219,10 +233,13 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
                 return;
             }
             if (resp.matched) {
-                Notification.addNotification({
-                    message: resp.message || identityConfig.ok,
-                    type: 'success'
-                });
+                if (!identityDone) {
+                    identityDone = true;
+                    Notification.addNotification({
+                        message: resp.message || identityConfig.ok,
+                        type: 'success'
+                    });
+                }
                 return;
             }
             // Mismatch: always warn; block if configured.
@@ -237,10 +254,177 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
                 }, image);
             }
         }).catch(function() {
+            identityBusy = false;
             if (overlay) {
                 overlay.remove();
             }
         });
+    }
+
+    function showLockOverlay(message, actionLabel, onAction) {
+        var existing = document.getElementById('proctor-identity-overlay');
+        if (existing) {
+            existing.remove();
+        }
+        lockHeld = true;
+        var overlay = showIdentityOverlay(message, false);
+        overlay.classList.add('blocking');
+        var box = overlay.querySelector('.proctor-identity-box');
+        var action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'btn btn-primary';
+        action.textContent = actionLabel;
+        action.addEventListener('click', onAction);
+        box.appendChild(action);
+        return overlay;
+    }
+
+    function enterFullscreen() {
+        var root = document.documentElement;
+        if (document.fullscreenElement) {
+            lockHeld = false;
+            var overlay = document.getElementById('proctor-identity-overlay');
+            if (overlay && overlay.dataset.lock === 'fullscreen') {
+                overlay.remove();
+            }
+            return;
+        }
+        var request = root.requestFullscreen || root.webkitRequestFullscreen;
+        if (request) {
+            request.call(root).catch(function() {
+                // The browser requires a click. The overlay button retries.
+            });
+        }
+    }
+
+    function requireFullscreen() {
+        if (document.fullscreenElement) {
+            return;
+        }
+        var current = document.getElementById('proctor-identity-overlay');
+        if (current && current.dataset.lock === 'fullscreen') {
+            return;
+        }
+        logIncident('fullscreen_exit', 'critical', identityConfig && identityConfig.fullscreen);
+        var overlay = showLockOverlay(
+            (identityConfig && identityConfig.fullscreen) || 'Fullscreen required',
+            (identityConfig && identityConfig.returnfullscreen) || 'Fullscreen',
+            enterFullscreen
+        );
+        overlay.dataset.lock = 'fullscreen';
+    }
+
+    function screenIsMonitor(mediaStream) {
+        var track = mediaStream && mediaStream.getVideoTracks ? mediaStream.getVideoTracks()[0] : null;
+        if (!track || !track.getSettings) {
+            return true;
+        }
+        var surface = track.getSettings().displaySurface;
+        return !surface || surface === 'monitor';
+    }
+
+    function stopScreenShare() {
+        if (screenStream) {
+            screenStream.getTracks().forEach(function(track) {
+                track.stop();
+            });
+            screenStream = null;
+        }
+    }
+
+    function requireScreenShare() {
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
+            return;
+        }
+        if (screenStream && screenStream.getVideoTracks().some(function(track) {
+            return track.readyState === 'live';
+        })) {
+            return;
+        }
+        var overlay = showLockOverlay(
+            (identityConfig && identityConfig.screenstopped) || 'Share the entire screen',
+            (identityConfig && identityConfig.sharescreen) || 'Share screen',
+            function() {
+                navigator.mediaDevices.getDisplayMedia({
+                    video: {displaySurface: 'monitor'},
+                    audio: false
+                }).then(function(shared) {
+                    if (!screenIsMonitor(shared)) {
+                        shared.getTracks().forEach(function(track) {
+                            track.stop();
+                        });
+                        logIncident('screen_share_stopped', 'critical');
+                        return;
+                    }
+                    stopScreenShare();
+                    screenStream = shared;
+                    lockHeld = false;
+                    var current = document.getElementById('proctor-identity-overlay');
+                    if (current && current.dataset.lock === 'screen') {
+                        current.remove();
+                    }
+                    var track = shared.getVideoTracks()[0];
+                    if (track) {
+                        track.addEventListener('ended', function() {
+                            screenStream = null;
+                            logIncident('screen_share_stopped', 'critical');
+                            requireScreenShare();
+                        });
+                    }
+                }).catch(function() {
+                    logIncident('screen_share_stopped', 'critical');
+                });
+            }
+        );
+        overlay.dataset.lock = 'screen';
+    }
+
+    function watchAudio(mediaStream) {
+        var track = mediaStream.getAudioTracks && mediaStream.getAudioTracks()[0];
+        if (!track || !window.AudioContext) {
+            return;
+        }
+        audioContext = new AudioContext();
+        var source = audioContext.createMediaStreamSource(mediaStream);
+        var analyser = audioContext.createAnalyser();
+        analyser.fftSize = 512;
+        source.connect(analyser);
+        var samples = new Uint8Array(analyser.fftSize);
+        var loudTicks = 0;
+        setInterval(function() {
+            if (!audioContext || audioContext.state === 'closed') {
+                return;
+            }
+            analyser.getByteTimeDomainData(samples);
+            var sum = 0;
+            for (var i = 0; i < samples.length; i++) {
+                var centered = (samples[i] - 128) / 128;
+                sum += centered * centered;
+            }
+            var rms = Math.sqrt(sum / samples.length);
+            if (rms > 0.08) {
+                loudTicks++;
+                if (loudTicks === 4) {
+                    logIncident('audio_detected', 'warning', identityConfig && identityConfig.audio);
+                }
+            } else {
+                loudTicks = 0;
+            }
+        }, 1000);
+    }
+
+    function blockShortcuts(event) {
+        var key = (event.key || '').toLowerCase();
+        var modified = event.ctrlKey || event.metaKey;
+        var blocked = ['c', 'v', 'x', 'a', 'p', 's', 'u', 'f'];
+        if (modified && blocked.indexOf(key) !== -1) {
+            event.preventDefault();
+            logIncident('keyboard_shortcut', 'critical');
+        }
+        if (key === 'f12' || (modified && event.shiftKey && (key === 'i' || key === 'j' || key === 'c'))) {
+            event.preventDefault();
+            logIncident('keyboard_shortcut', 'critical');
+        }
     }
 
     function captureAndUpload(width, height) {
@@ -310,10 +494,20 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             document.body.appendChild(container);
 
             captureAndUpload(width, height);
-            runIdentityCheck();
+            runIdentityCheck(false);
             timer = setInterval(function() {
                 captureAndUpload(width, height);
             }, intervalMs);
+            if (identityConfig && identityConfig.enabled) {
+                identityTimer = setInterval(function() {
+                    runIdentityCheck(true);
+                }, 90000);
+            }
+            enterFullscreen();
+            requireScreenShare();
+            navigator.mediaDevices.getUserMedia({audio: true, video: false}).then(watchAudio).catch(function() {
+                // Microphone is optional. The webcam stream still runs.
+            });
         }).catch(function() {
             Notification.addNotification({
                 message: incidentLabel('cameradenied', 'Camera permission required'),
@@ -338,6 +532,41 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             e.preventDefault();
             logIncident('copy_attempt', 'critical');
         });
+
+        document.addEventListener('contextmenu', function(e) {
+            e.preventDefault();
+        });
+
+        document.addEventListener('keydown', blockShortcuts);
+
+        document.addEventListener('fullscreenchange', function() {
+            if (!document.fullscreenElement) {
+                requireFullscreen();
+            }
+        });
+
+        document.addEventListener('moodle-proctor-incident', function(e) {
+            var type = e.detail && e.detail.type;
+            if (!type) {
+                return;
+            }
+            logIncident(type, 'critical');
+            if (type === 'multiple_displays' && identityConfig) {
+                showLockOverlay(identityConfig.displays || type, identityConfig.returnfullscreen || 'OK', function() {
+                    if (window.screen && window.screen.isExtended) {
+                        return;
+                    }
+                    var overlay = document.getElementById('proctor-identity-overlay');
+                    if (overlay) {
+                        overlay.remove();
+                    }
+                });
+            }
+        });
+
+        if (window.screen && window.screen.isExtended) {
+            logIncident('multiple_displays', 'critical', identityConfig && identityConfig.displays);
+        }
 
         document.addEventListener('paste', function(e) {
             e.preventDefault();

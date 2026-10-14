@@ -8,11 +8,11 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component   = 'quizaccess_moodle_proctor';
-$plugin->version     = 2026062610;
-$plugin->requires    = 2026042000; // Moodle 5.2.
-$plugin->supported   = [502, 503];
+$plugin->version     = 2026101400;
+$plugin->requires    = 2026100500; // Moodle 5.3.
+$plugin->supported   = [503, 503];
 $plugin->maturity    = MATURITY_STABLE;
-$plugin->release     = '1.6.3-moodle52';
+$plugin->release     = '1.6.4-moodle53';
 $plugin->dependencies = [
-    'local_moodle_proctor' => 2026062610,
+    'local_moodle_proctor' => 2026101400,
 ];
