@@ -11,13 +11,39 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     var captureHeight = 480;
     var alertTitle = 'Proctoring alert';
     var identityConfig = null;
-    var identityDone = false;
-    var identityBusy = false;
-    var identityTimer = null;
     var incidentMessages = {};
     var screenStream = null;
     var audioContext = null;
     var lockHeld = false;
+    var options = {};
+    var blocked = false;
+    var faceTimer = null;
+    var identityKick = null;
+    var lastUploadAt = 0;
+
+    /**
+     * When the identity was last checked in this attempt. Moodle reloads attempt.php on every
+     * page/answer submission; without this every page would re-verify (and re-bill) identity.
+     *
+     * @return {number} ms timestamp, 0 if never.
+     */
+    function lastIdentityAt() {
+        try {
+            return parseInt(window.sessionStorage.getItem('moodleProctorIdentity:' + attemptid), 10) || 0;
+        } catch (e) {
+            return 0;
+        }
+    }
+
+    function markIdentityChecked() {
+        try {
+            window.sessionStorage.setItem('moodleProctorIdentity:' + attemptid, String(Date.now()));
+        } catch (e) {
+            // Private mode: the server still limits identity checks per interval.
+        }
+    }
+    // Incidents raised before the first snapshot opened the session; sent once it exists.
+    var pendingIncidents = [];
 
     function incidentLabel(type, fallback) {
         if (incidentMessages && incidentMessages[type]) {
@@ -113,13 +139,100 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         document.body.appendChild(wrapper);
     }
 
+    /**
+     * The server blocked the attempt: stop monitoring and cover the page. Removing the overlay
+     * changes nothing, since the server refuses the attempt pages until a teacher releases it.
+     *
+     * @param {string} message
+     */
+    function showBlockedOverlay(message) {
+        if (blocked) {
+            return;
+        }
+        blocked = true;
+        if (timer) {
+            clearInterval(timer);
+            timer = null;
+        }
+        if (faceTimer) {
+            clearInterval(faceTimer);
+            faceTimer = null;
+        }
+        if (identityKick) {
+            clearTimeout(identityKick);
+            identityKick = null;
+        }
+        var overlay = showIdentityOverlay(message, false);
+        overlay.classList.add('blocking');
+        overlay.dataset.lock = 'violation';
+        var box = overlay.querySelector('.proctor-identity-box');
+        if (identityConfig && identityConfig.blockedtitle) {
+            var title = document.createElement('h3');
+            title.className = 'proctor-identity-title';
+            title.textContent = identityConfig.blockedtitle;
+            box.insertBefore(title, box.firstChild);
+        }
+        var leave = document.createElement('button');
+        leave.type = 'button';
+        leave.className = 'btn btn-light';
+        leave.textContent = (identityConfig && identityConfig.leave) || 'Leave';
+        leave.addEventListener('click', function() {
+            window.location.href = (identityConfig && identityConfig.courseurl) || '/';
+        });
+        box.appendChild(leave);
+    }
+
+    var cameraWaitStarted = 0;
+
+    /**
+     * The camera delivers a usable image: at least ~1 s of video and a frame that is not
+     * almost black. Gives up waiting after 8 s so a really dark room still gets checked.
+     *
+     * @param {HTMLVideoElement} video
+     * @return {boolean}
+     */
+    function cameraReady(video) {
+        if (!video.videoWidth || video.readyState < 2) {
+            return false;
+        }
+        if (!cameraWaitStarted) {
+            cameraWaitStarted = Date.now();
+        }
+        if (Date.now() - cameraWaitStarted > 8000) {
+            return true;
+        }
+        if (video.currentTime < 1) {
+            return false;
+        }
+        var probe = document.createElement('canvas');
+        probe.width = 32;
+        probe.height = 24;
+        var ctx = probe.getContext('2d', {willReadFrequently: true});
+        ctx.drawImage(video, 0, 0, 32, 24);
+        var data = ctx.getImageData(0, 0, 32, 24).data;
+        var sum = 0;
+        for (var i = 0; i < data.length; i += 4) {
+            sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        }
+        return sum / (data.length / 4) > 20;
+    }
+
+    function flushPendingIncidents() {
+        var queued = pendingIncidents;
+        pendingIncidents = [];
+        queued.forEach(function(item) {
+            logIncident(item.type, item.severity, item.detail);
+        });
+    }
+
     function handleAlertResponse(response, thumbDataUrl) {
         if (response && response.success) {
-            if (response.sessionid) {
+            if (response.sessionid && !sessionId) {
                 sessionId = response.sessionid;
+                flushPendingIncidents();
             }
-            if (response.alerttype === 'identity_mismatch' && identityConfig && identityConfig.block) {
-                showIdentityOverlay(identityConfig.blocked || response.alertmessage, true);
+            if (response.blocked) {
+                showBlockedOverlay(response.blockmessage || response.alertmessage);
                 return;
             }
             showLiveAlert(response, thumbDataUrl);
@@ -131,6 +244,7 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             if (severity === 'info') {
                 return;
             }
+            pendingIncidents.push({type: type, severity: severity, detail: detail});
             showLiveAlert({
                 livealert: true,
                 alertseverity: severity || 'warning',
@@ -164,6 +278,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     function showIdentityOverlay(message, blocking) {
         var existing = document.getElementById('proctor-identity-overlay');
         if (existing) {
+            // A violation block stays on top of everything else.
+            if (existing.dataset.lock === 'violation') {
+                return existing;
+            }
             existing.remove();
         }
         var overlay = document.createElement('div');
@@ -177,92 +295,17 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         text.className = 'proctor-identity-message';
         text.textContent = message;
         box.appendChild(text);
-
-        if (blocking) {
-            var retry = document.createElement('button');
-            retry.type = 'button';
-            retry.className = 'btn btn-primary me-2';
-            retry.textContent = (identityConfig && identityConfig.retry) || 'Retry';
-            retry.addEventListener('click', function() {
-                overlay.remove();
-                identityDone = false;
-                runIdentityCheck();
-            });
-            var leave = document.createElement('button');
-            leave.type = 'button';
-            leave.className = 'btn btn-outline-light';
-            leave.textContent = (identityConfig && identityConfig.leave) || 'Leave';
-            leave.addEventListener('click', function() {
-                window.location.href = (identityConfig && identityConfig.courseurl) || '/';
-            });
-            box.appendChild(retry);
-            box.appendChild(leave);
-        }
         overlay.appendChild(box);
         document.body.appendChild(overlay);
         return overlay;
     }
 
-    function runIdentityCheck(silent) {
-        if (!identityConfig || !identityConfig.enabled || identityBusy) {
-            return;
-        }
-        if (identityDone && !silent) {
-            return;
-        }
-        var video = document.getElementById('proctor-monitor-video');
-        if (!video || !stream || !video.videoWidth) {
-            setTimeout(function() {
-                runIdentityCheck(silent);
-            }, 1500);
-            return;
-        }
-        identityBusy = true;
-        var image = captureData(video, captureWidth, captureHeight);
-        var overlay = silent ? null : showIdentityOverlay(identityConfig.checking, false);
-
-        Ajax.call([{
-            methodname: 'local_moodle_proctor_verify_quiz_identity',
-            args: {attemptid: attemptid, cmid: cmid, image: image}
-        }])[0].then(function(resp) {
-            identityBusy = false;
-            if (overlay) {
-                overlay.remove();
-            }
-            if (!resp || !resp.enabled || !resp.checked) {
-                return;
-            }
-            if (resp.matched) {
-                if (!identityDone) {
-                    identityDone = true;
-                    Notification.addNotification({
-                        message: resp.message || identityConfig.ok,
-                        type: 'success'
-                    });
-                }
-                return;
-            }
-            // Mismatch: always warn; block if configured.
-            if (identityConfig.block) {
-                showIdentityOverlay(identityConfig.blocked, true);
-            } else {
-                showLiveAlert({
-                    livealert: true,
-                    alertseverity: 'critical',
-                    alertmessage: resp.message || identityConfig.mismatch,
-                    facesjson: '[]'
-                }, image);
-            }
-        }).catch(function() {
-            identityBusy = false;
-            if (overlay) {
-                overlay.remove();
-            }
-        });
-    }
-
     function showLockOverlay(message, actionLabel, onAction) {
         var existing = document.getElementById('proctor-identity-overlay');
+        if (blocked || (existing && existing.dataset.lock === 'violation')) {
+            // Never replace the violation block; callers get a detached element to tag.
+            return document.createElement('div');
+        }
         if (existing) {
             existing.remove();
         }
@@ -427,12 +470,35 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
-    function captureAndUpload(width, height) {
+    /**
+     * Take a snapshot; the server counts faces and checks it is the enrolled person in the
+     * same request, and answers with alerts or a block.
+     *
+     * @param {number} width
+     * @param {number} height
+     * @param {boolean} first Show "verifying identity" until the first answer.
+     * @param {string} purpose "identity" (faces + identity check) or "faces" (free local face count only).
+     */
+    function captureAndUpload(width, height, first, purpose) {
+        if (blocked) {
+            return;
+        }
+        purpose = purpose || 'identity';
         var video = document.getElementById('proctor-monitor-video');
         if (!video || !stream) {
             logIncident('camera_off', 'critical');
             return;
         }
+        if (!cameraReady(video)) {
+            // Webcams send a few black/dark frames while they adjust exposure: wait for a real image.
+            setTimeout(function() {
+                captureAndUpload(width, height, first, purpose);
+            }, 500);
+            return;
+        }
+        lastUploadAt = Date.now();
+        var checking = first && identityConfig && identityConfig.enabled
+            ? showIdentityOverlay(identityConfig.checking, false) : null;
         var canvas = document.createElement('canvas');
         canvas.width = width;
         canvas.height = height;
@@ -445,11 +511,24 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             args: {
                 attemptid: attemptid,
                 image: image,
-                cmid: cmid
+                cmid: cmid,
+                purpose: purpose
             }
         }])[0].then(function(response) {
+            if (checking) {
+                checking.remove();
+            }
+            if (response && response.identitychecked) {
+                markIdentityChecked();
+            }
+            if (first && response && response.identitychecked && response.identitymatched && identityConfig) {
+                Notification.addNotification({message: identityConfig.ok, type: 'success'});
+            }
             handleAlertResponse(response, image);
         }).catch(function() {
+            if (checking) {
+                checking.remove();
+            }
             Notification.addNotification({
                 message: incidentLabel('uploadfailed', 'Proctoring upload failed'),
                 type: 'error'
@@ -457,7 +536,42 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
-    function startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents) {
+    /**
+     * Require the browser extension: it answers every ping; without an answer the exam is covered.
+     */
+    function watchExtension() {
+        var lastOk = Date.now();
+        var reported = false;
+        document.addEventListener('moodle-proctor-extension-ok', function() {
+            lastOk = Date.now();
+            reported = false;
+            var overlay = document.getElementById('proctor-identity-overlay');
+            if (overlay && overlay.dataset.lock === 'extension') {
+                overlay.remove();
+                lockHeld = false;
+            }
+        });
+        setInterval(function() {
+            document.dispatchEvent(new CustomEvent('moodle-proctor-ping'));
+            if (Date.now() - lastOk < 25000 || blocked) {
+                return;
+            }
+            if (!reported) {
+                reported = true;
+                logIncident('extension_lost', 'critical', options.missing);
+            }
+            var current = document.getElementById('proctor-identity-overlay');
+            if (!current || current.dataset.lock !== 'extension') {
+                var overlay = showLockOverlay(options.missing || 'Extension required', 'OK', function() {
+                    window.location.reload();
+                });
+                overlay.dataset.lock = 'extension';
+            }
+        }, 10000);
+        document.dispatchEvent(new CustomEvent('moodle-proctor-ping'));
+    }
+
+    function startMonitor(attemptId, cmId, width, height, intervalMs, opts, liveAlertTitle, identity, incidents) {
         if (!attemptId || attemptId <= 0) {
             return;
         }
@@ -469,6 +583,8 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         alertTitle = liveAlertTitle || alertTitle;
         identityConfig = identity || null;
         incidentMessages = incidents || {};
+        // Older callers passed a boolean "requireExtension".
+        options = (typeof opts === 'object' && opts) ? opts : {require: !!opts, webcam: true, fullscreen: true};
 
         if (!navigator.mediaDevices) {
             Notification.addNotification({
@@ -478,8 +594,18 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             return;
         }
 
+        startCamera(width, height, intervalMs);
+        bindPageGuards();
+    }
+
+    function startCamera(width, height, intervalMs) {
         navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(s) {
             stream = s;
+            var lock = document.getElementById('proctor-identity-overlay');
+            if (lock && lock.dataset.lock === 'camera') {
+                lock.remove();
+                lockHeld = false;
+            }
             var container = document.createElement('div');
             container.className = 'proctor-monitor-float position-fixed';
             container.style.cssText = 'bottom:10px;right:10px;z-index:9999;opacity:0.85;';
@@ -493,39 +619,83 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             container.appendChild(video);
             document.body.appendChild(container);
 
-            captureAndUpload(width, height);
-            runIdentityCheck(false);
-            timer = setInterval(function() {
-                captureAndUpload(width, height);
-            }, intervalMs);
-            if (identityConfig && identityConfig.enabled) {
-                identityTimer = setInterval(function() {
-                    runIdentityCheck(true);
-                }, 90000);
+            // Identity every intervalMs across the whole attempt, not on every page load.
+            var startIdentityLoop = function() {
+                timer = setInterval(function() {
+                    captureAndUpload(width, height, false, 'identity');
+                }, intervalMs);
+            };
+            var since = Date.now() - lastIdentityAt();
+            if (since >= intervalMs) {
+                // First page of the attempt (or the interval is due): verify, showing "verifying identity".
+                captureAndUpload(width, height, true, 'identity');
+                startIdentityLoop();
+            } else {
+                // Next page: quick face check only, and the identity check when it is due.
+                captureAndUpload(width, height, false, 'faces');
+                identityKick = setTimeout(function() {
+                    identityKick = null;
+                    captureAndUpload(width, height, false, 'identity');
+                    startIdentityLoop();
+                }, intervalMs - since);
             }
-            enterFullscreen();
-            requireScreenShare();
+            // Frequent free check for a second person / nobody, between identity checks.
+            if (options.faceintervalms > 0) {
+                faceTimer = setInterval(function() {
+                    if (Date.now() - lastUploadAt >= options.faceintervalms / 2) {
+                        captureAndUpload(width, height, false, 'faces');
+                    }
+                }, options.faceintervalms);
+            }
+            if (options.fullscreen) {
+                enterFullscreen();
+            }
+            if (options.screenshare) {
+                requireScreenShare();
+            }
             navigator.mediaDevices.getUserMedia({audio: true, video: false}).then(watchAudio).catch(function() {
                 // Microphone is optional. The webcam stream still runs.
             });
         }).catch(function() {
+            if (options.webcam) {
+                logIncident('camera_off', 'critical');
+                var overlay = showLockOverlay(options.webcamrequired || incidentLabel('cameradenied', 'Camera required'),
+                    options.retrycamera || 'Retry', function() {
+                        startCamera(width, height, intervalMs);
+                    });
+                overlay.dataset.lock = 'camera';
+                return;
+            }
             Notification.addNotification({
                 message: incidentLabel('cameradenied', 'Camera permission required'),
                 type: 'error'
             });
         });
+    }
 
+    function bindPageGuards() {
         document.addEventListener('visibilitychange', function() {
             if (document.hidden && sessionId) {
                 logIncident('tab_hidden', 'critical');
             }
         });
 
+        // Leaving the exam window (another app or browser): logged with how long it lasted.
+        var blurredAt = 0;
         window.addEventListener('blur', function() {
-            if (!sessionId) {
+            blurredAt = Date.now();
+        });
+        window.addEventListener('focus', function() {
+            if (!blurredAt) {
                 return;
             }
-            logIncident('focus_lost', 'info', incidentLabel('focuslost', 'Focus lost'));
+            var seconds = Math.round((Date.now() - blurredAt) / 1000);
+            blurredAt = 0;
+            if (seconds < 2 || blocked) {
+                return;
+            }
+            var detail = (incidentMessages.awayseconds || '{$a}').replace('{$a}', seconds);
+            logIncident('focus_lost', seconds >= 10 ? 'critical' : 'warning', detail);
         });
 
         document.addEventListener('copy', function(e) {
@@ -540,7 +710,7 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         document.addEventListener('keydown', blockShortcuts);
 
         document.addEventListener('fullscreenchange', function() {
-            if (!document.fullscreenElement) {
+            if (options.fullscreen && !document.fullscreenElement) {
                 requireFullscreen();
             }
         });
@@ -573,16 +743,14 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             logIncident('paste_attempt', 'critical');
         });
 
-        if (requireExtension) {
-            setInterval(function() {
-                document.dispatchEvent(new CustomEvent('moodle-proctor-ping'));
-            }, 15000);
+        if (options.require) {
+            watchExtension();
         }
     }
 
     return {
-        init: function(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents) {
-            startMonitor(attemptId, cmId, width, height, intervalMs, requireExtension, liveAlertTitle, identity, incidents);
+        init: function(attemptId, cmId, width, height, intervalMs, opts, liveAlertTitle, identity, incidents) {
+            startMonitor(attemptId, cmId, width, height, intervalMs, opts, liveAlertTitle, identity, incidents);
         }
     };
 });

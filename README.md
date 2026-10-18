@@ -5,9 +5,9 @@
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Branch](https://img.shields.io/badge/Branch-MOODLE__53-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_53)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
-[![Version](https://img.shields.io/badge/Version-1.6.4-informational?style=flat-square)](version.php)
+[![Version](https://img.shields.io/badge/Version-1.7.0-informational?style=flat-square)](version.php)
 
-Regla de acceso a cuestionarios: webcam, capturas periódicas, **verificación de identidad al entrar y cada 90 segundos** (OpenCV local o Amazon Rekognition), **bloqueo del navegador** (pantalla completa, monitor compartido, copiar/pegar y atajos) y alertas en vivo.
+Regla de acceso a cuestionarios: webcam, **verificación periódica de identidad** y **detección de más de una persona o ausencia** (motor local, Amazon Rekognition o mixto), **reglas por cuestionario** para cada tipo de incidente (registrar, notificar o **bloquear el intento en el servidor**), bloqueo del navegador y alertas en vivo.
 
 | | |
 |---|---|
@@ -28,7 +28,7 @@ Regla de acceso a cuestionarios: webcam, capturas periódicas, **verificación d
 |-----------|---------|
 | Moodle | **5.3** (`2026100500`) |
 | PHP | **8.3+** |
-| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_53) **v1.6.4** |
+| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_53) **v1.7.0** |
 
 ---
 
@@ -47,28 +47,47 @@ En Moodle 5.3 la carpeta pública es `public/`. El comando anterior se ejecuta d
 
 ## Configuración por cuestionario
 
-**Editar cuestionario → Restricciones extra en los intentos**
+**Editar cuestionario → Supervisión (Moodle Proctor)** — sección propia, justo después de *General*.
 
 | Opción | Descripción |
 |--------|-------------|
-| **Enable proctoring** | Activa supervisión |
-| **Require webcam** | Cámara activa durante el intento |
-| **Require browser extension** | Exige la extensión Chromium. Por defecto está en No |
+| **Habilitar supervisión** | Activa la supervisión en el cuestionario |
+| **Requerir cámara** | El examen queda cubierto si no se permite la cámara |
+| **Requerir extensión del navegador** | El examen se cubre si la extensión no responde (necesaria para detectar herramientas de IA) |
+| **Requerir pantalla completa** | Sí por defecto. El navegador sale de pantalla completa en cada cambio de página |
+| **Requerir compartir la pantalla completa** | No por defecto. El navegador corta la pantalla compartida en cada cambio de página; conviene con varias preguntas por página |
 
-El estudiante debe haber completado la **verificación de identidad** (cédula + rostro) antes del intento si el enrollment está habilitado en el núcleo.
+### Qué hacer ante cada incidente
 
-### Durante el intento (v1.6.4)
+Para cada tipo de incidente se elige la acción y desde qué vez se aplica en el mismo intento (lista de 1.ª a 20.ª vez):
 
-1. `proctor.js` activa la webcam.
-2. Compara el rostro con la foto de enrollment (`verify_quiz_identity`). El motor por defecto es **OpenCV local**. Rekognition se usa solo si está configurado y elegido en los ajustes.
-3. Repite la comparación cada 90 segundos.
-4. Si no coincide y **Bloquear el intento si la identidad no coincide** está activo, muestra un overlay. Si no, registra la incidencia y muestra una alerta.
-5. Pide pantalla completa y compartir el monitor. Bloquea el menú contextual y los atajos Ctrl/Cmd+C, V, X, A, P, S, U y F12.
-6. Si la extensión Chrome está instalada, recibe avisos de pestañas de IA y de un segundo monitor.
+| Incidente | Por defecto |
+|-----------|-------------|
+| Más de una persona frente a la cámara | Bloquear desde la 1.ª vez |
+| Otra persona en lugar del estudiante | Bloquear desde la 1.ª vez |
+| Estudiante ausente frente a la cámara | Notificar desde la 2.ª captura seguida |
+| Cambio de pestaña o salida de la ventana | Notificar desde la 3.ª vez |
+| Uso de herramientas de IA | Bloquear desde la 1.ª vez |
+| Copiar, pegar o atajos de teclado | Solo registrar |
+| Salir de pantalla completa, dejar de compartir pantalla o monitores extra | Notificar desde la 3.ª vez |
+| Total de incidentes graves | Solo registrar |
 
-Ajustes del plugin: **Administración → Cuestionarios → Moodle Proctor quiz access rule**.
+- **Solo registrar:** queda en el informe.
+- **Notificar al docente:** además avisa al docente y al estudiante (mensaje de Moodle y correo) y guarda la foto como evidencia.
+- **Bloquear el examen:** además el servidor bloquea el intento (no se pueden ver las preguntas ni autoguardar, ni iniciar otro intento del mismo cuestionario) hasta que un docente, gestor o administrador conceda otra oportunidad.
 
----
+El estudiante debe haber completado la **verificación de identidad** (cédula + rostro) antes del intento si la inscripción está habilitada en el núcleo.
+
+### Durante el intento (v1.7.0)
+
+1. `proctor.js` activa la cámara y espera una imagen real (no los primeros fotogramas oscuros).
+2. **Verificación de identidad** al entrar y luego cada intervalo configurado en el núcleo (5 min por defecto). Las recargas de página no la repiten.
+3. **Control de rostros** cada 30 s por defecto (motor local, sin costo): más de una persona o nadie frente a la cámara.
+4. Cada hallazgo y cada incidente del navegador se evalúa con las reglas del cuestionario; si corresponde, el servidor bloquea el intento y el estudiante ve una capa que no se puede cerrar.
+5. El personal ve en la página del cuestionario el botón **Infracciones de supervisión** y la pestaña **Más → Supervisión**, con la evidencia y **Conceder otra oportunidad**.
+6. Con la extensión: bloqueo de copiar/pegar, cierre de pestañas de IA, aviso de segundo monitor y de salida del navegador.
+
+El consentimiento previo se pide una vez por intento.
 
 ## Suite MOODLE_53
 
