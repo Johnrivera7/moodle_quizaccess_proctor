@@ -1,7 +1,7 @@
 # Moodle Proctor — Quiz Access Rule
 
 [![Moodle](https://img.shields.io/badge/Moodle-5.3-orange?style=flat-square&logo=moodle)](https://moodle.org)
-[![PHP](https://img.shields.io/badge/PHP-8.3%2B-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
+[![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Branch](https://img.shields.io/badge/Branch-MOODLE__53-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_53)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
@@ -16,7 +16,7 @@ Regla de acceso a cuestionarios: webcam, **verificación periódica de identidad
 | **Componente** | `quizaccess_moodle_proctor` |
 | **Instalación** | `mod/quiz/accessrule/moodle_proctor/` |
 | **Repositorio** | https://github.com/Johnrivera7/moodle_quizaccess_proctor |
-| **Rama** | **`MOODLE_53`** — Moodle 5.3 / PHP 8.3+ |
+| **Rama** | **`MOODLE_53`** (por defecto) — Moodle 5.3 / PHP 8.5 |
 
 > Moodle 5.2: rama [`MOODLE_52`](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_52). Moodle 4.5: rama [`MOODLE_45`](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_45).
 
@@ -27,7 +27,7 @@ Regla de acceso a cuestionarios: webcam, **verificación periódica de identidad
 | Requisito | Versión |
 |-----------|---------|
 | Moodle | **5.3** (`2026100500`) |
-| PHP | **8.3+** |
+| PHP | **8.5** |
 | Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_53) **v1.7.0** |
 
 ---
