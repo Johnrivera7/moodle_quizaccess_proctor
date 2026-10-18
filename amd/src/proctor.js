@@ -1,5 +1,5 @@
 // @license MIT
-define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notification, Str) {
+define(['core/ajax', 'core/notification'], function(Ajax, Notification) {
     'use strict';
 
     var stream = null;
@@ -14,7 +14,6 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     var incidentMessages = {};
     var screenStream = null;
     var audioContext = null;
-    var lockHeld = false;
     var options = {};
     var blocked = false;
     var faceTimer = null;
@@ -35,6 +34,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     */
     function markIdentityChecked() {
         try {
             window.sessionStorage.setItem('moodleProctorIdentity:' + attemptid, String(Date.now()));
@@ -45,6 +47,11 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
     // Incidents raised before the first snapshot opened the session; sent once it exists.
     var pendingIncidents = [];
 
+    /**
+     *
+     * @param {string} type
+     * @param {string} fallback
+     */
     function incidentLabel(type, fallback) {
         if (incidentMessages && incidentMessages[type]) {
             return incidentMessages[type];
@@ -52,6 +59,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return fallback || type;
     }
 
+    /**
+     *
+     * @param {string} facesjson
+     */
     function parseFaces(facesjson) {
         try {
             var faces = JSON.parse(facesjson || '[]');
@@ -61,6 +72,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     */
     function removeExistingAlert() {
         var existing = document.getElementById('proctor-live-alert-banner');
         if (existing) {
@@ -68,6 +82,11 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     * @param {Object} response
+     * @param {string} thumbDataUrl
+     */
     function showLiveAlert(response, thumbDataUrl) {
         if (!response || !response.livealert) {
             return;
@@ -217,6 +236,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return sum / (data.length / 4) > 20;
     }
 
+    /**
+     *
+     */
     function flushPendingIncidents() {
         var queued = pendingIncidents;
         pendingIncidents = [];
@@ -225,6 +247,11 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
+    /**
+     *
+     * @param {Object} response
+     * @param {string} thumbDataUrl
+     */
     function handleAlertResponse(response, thumbDataUrl) {
         if (response && response.success) {
             if (response.sessionid && !sessionId) {
@@ -239,6 +266,12 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     * @param {string} type
+     * @param {string} severity
+     * @param {Object} detail
+     */
     function logIncident(type, severity, detail) {
         if (!sessionId) {
             if (severity === 'info') {
@@ -267,14 +300,11 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
-    function captureData(video, width, height) {
-        var canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        canvas.getContext('2d').drawImage(video, 0, 0, width, height);
-        return canvas.toDataURL('image/jpeg', 0.85);
-    }
-
+    /**
+     *
+     * @param {string} message
+     * @param {boolean} blocking
+     */
     function showIdentityOverlay(message, blocking) {
         var existing = document.getElementById('proctor-identity-overlay');
         if (existing) {
@@ -300,6 +330,12 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return overlay;
     }
 
+    /**
+     *
+     * @param {string} message
+     * @param {string} actionLabel
+     * @param {Function} onAction
+     */
     function showLockOverlay(message, actionLabel, onAction) {
         var existing = document.getElementById('proctor-identity-overlay');
         if (blocked || (existing && existing.dataset.lock === 'violation')) {
@@ -309,7 +345,6 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         if (existing) {
             existing.remove();
         }
-        lockHeld = true;
         var overlay = showIdentityOverlay(message, false);
         overlay.classList.add('blocking');
         var box = overlay.querySelector('.proctor-identity-box');
@@ -322,10 +357,12 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return overlay;
     }
 
+    /**
+     *
+     */
     function enterFullscreen() {
         var root = document.documentElement;
         if (document.fullscreenElement) {
-            lockHeld = false;
             var overlay = document.getElementById('proctor-identity-overlay');
             if (overlay && overlay.dataset.lock === 'fullscreen') {
                 overlay.remove();
@@ -340,6 +377,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     */
     function requireFullscreen() {
         if (document.fullscreenElement) {
             return;
@@ -357,6 +397,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         overlay.dataset.lock = 'fullscreen';
     }
 
+    /**
+     *
+     * @param {MediaStream} mediaStream
+     */
     function screenIsMonitor(mediaStream) {
         var track = mediaStream && mediaStream.getVideoTracks ? mediaStream.getVideoTracks()[0] : null;
         if (!track || !track.getSettings) {
@@ -366,6 +410,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         return !surface || surface === 'monitor';
     }
 
+    /**
+     *
+     */
     function stopScreenShare() {
         if (screenStream) {
             screenStream.getTracks().forEach(function(track) {
@@ -375,6 +422,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }
     }
 
+    /**
+     *
+     */
     function requireScreenShare() {
         if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) {
             return;
@@ -401,7 +451,6 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
                     }
                     stopScreenShare();
                     screenStream = shared;
-                    lockHeld = false;
                     var current = document.getElementById('proctor-identity-overlay');
                     if (current && current.dataset.lock === 'screen') {
                         current.remove();
@@ -422,6 +471,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         overlay.dataset.lock = 'screen';
     }
 
+    /**
+     *
+     * @param {MediaStream} mediaStream
+     */
     function watchAudio(mediaStream) {
         var track = mediaStream.getAudioTracks && mediaStream.getAudioTracks()[0];
         if (!track || !window.AudioContext) {
@@ -456,6 +509,10 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         }, 1000);
     }
 
+    /**
+     *
+     * @param {Event} event
+     */
     function blockShortcuts(event) {
         var key = (event.key || '').toLowerCase();
         var modified = event.ctrlKey || event.metaKey;
@@ -548,7 +605,6 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
             var overlay = document.getElementById('proctor-identity-overlay');
             if (overlay && overlay.dataset.lock === 'extension') {
                 overlay.remove();
-                lockHeld = false;
             }
         });
         setInterval(function() {
@@ -571,6 +627,18 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         document.dispatchEvent(new CustomEvent('moodle-proctor-ping'));
     }
 
+    /**
+     *
+     * @param {number} attemptId
+     * @param {number} cmId
+     * @param {number} width
+     * @param {number} height
+     * @param {number} intervalMs
+     * @param {Object} opts
+     * @param {string} liveAlertTitle
+     * @param {Object} identity
+     * @param {Object} incidents
+     */
     function startMonitor(attemptId, cmId, width, height, intervalMs, opts, liveAlertTitle, identity, incidents) {
         if (!attemptId || attemptId <= 0) {
             return;
@@ -598,13 +666,18 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         bindPageGuards();
     }
 
+    /**
+     *
+     * @param {number} width
+     * @param {number} height
+     * @param {number} intervalMs
+     */
     function startCamera(width, height, intervalMs) {
         navigator.mediaDevices.getUserMedia({video: true, audio: false}).then(function(s) {
             stream = s;
             var lock = document.getElementById('proctor-identity-overlay');
             if (lock && lock.dataset.lock === 'camera') {
                 lock.remove();
-                lockHeld = false;
             }
             var container = document.createElement('div');
             container.className = 'proctor-monitor-float position-fixed';
@@ -673,6 +746,9 @@ define(['core/ajax', 'core/notification', 'core/str'], function(Ajax, Notificati
         });
     }
 
+    /**
+     *
+     */
     function bindPageGuards() {
         document.addEventListener('visibilitychange', function() {
             if (document.hidden && sessionId) {

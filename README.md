@@ -1,11 +1,11 @@
-# Moodle Proctor — Quiz Access Rule
+# <img src="docs/chile.svg" height="22" alt="Bandera de Chile"> Proctor Chile — Quiz Access Rule
 
 [![Moodle](https://img.shields.io/badge/Moodle-5.3-orange?style=flat-square&logo=moodle)](https://moodle.org)
 [![PHP](https://img.shields.io/badge/PHP-8.5-777BB4?style=flat-square&logo=php&logoColor=white)](https://www.php.net)
 [![License](https://img.shields.io/badge/License-GPL--3.0-blue?style=flat-square)](LICENSE)
 [![Branch](https://img.shields.io/badge/Branch-MOODLE__53-green?style=flat-square)](https://github.com/Johnrivera7/moodle_quizaccess_proctor/tree/MOODLE_53)
 [![Depends on](https://img.shields.io/badge/Requires-local__moodle__proctor-red?style=flat-square)](https://github.com/Johnrivera7/moodle_proctor)
-[![Version](https://img.shields.io/badge/Version-1.7.0-informational?style=flat-square)](version.php)
+[![Version](https://img.shields.io/badge/Version-1.8.0-informational?style=flat-square)](version.php)
 
 Regla de acceso a cuestionarios: webcam, **verificación periódica de identidad** y **detección de más de una persona o ausencia** (motor local, Amazon Rekognition o mixto), **reglas por cuestionario** para cada tipo de incidente (registrar, notificar o **bloquear el intento en el servidor**), bloqueo del navegador y alertas en vivo.
 
@@ -28,7 +28,7 @@ Regla de acceso a cuestionarios: webcam, **verificación periódica de identidad
 |-----------|---------|
 | Moodle | **5.3** (`2026100500`) |
 | PHP | **8.5** |
-| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_53) **v1.7.0** |
+| Plugin núcleo | [`local_moodle_proctor`](https://github.com/Johnrivera7/moodle_proctor/tree/MOODLE_53) **v1.8.0** |
 
 ---
 
@@ -47,7 +47,7 @@ En Moodle 5.3 la carpeta pública es `public/`. El comando anterior se ejecuta d
 
 ## Configuración por cuestionario
 
-**Editar cuestionario → Supervisión (Moodle Proctor)** — sección propia, justo después de *General*.
+**Editar cuestionario → Supervisión (Proctor Chile)** — sección propia, justo después de *General*.
 
 | Opción | Descripción |
 |--------|-------------|

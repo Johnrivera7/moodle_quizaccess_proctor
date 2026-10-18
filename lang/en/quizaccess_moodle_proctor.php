@@ -1,11 +1,34 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Strings for component 'quizaccess_moodle_proctor', language 'en'.
+ *
+ * @package    quizaccess_moodle_proctor
+ * @copyright  2026 John Rivera <https://github.com/Johnrivera7>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Moodle Proctor quiz access rule';
+$string['pluginname'] = 'Proctor Chile quiz access rule';
 $string['privacy:metadata'] = 'The quiz access rule does not store personal data. Data is stored by local_moodle_proctor.';
 
 $string['proctoringrequired'] = 'Enable proctoring';
-$string['proctoringrequired_help'] = 'Requires Moodle Proctor (local_moodle_proctor) to be installed and configured. Captures webcam images during the attempt and logs incidents.';
+$string['proctoringrequired_help'] = 'Requires Proctor Chile (local_moodle_proctor) to be installed and configured. Captures webcam images during the attempt and logs incidents.';
 $string['proctoringenabled'] = 'Proctoring is enabled for this quiz';
 $string['requirewebcam'] = 'Require camera';
 $string['requireextension'] = 'Require browser extension';
@@ -25,12 +48,12 @@ $string['identity_verified'] = 'Identity verified successfully.';
 $string['identity_retry'] = 'Retry';
 $string['identity_leave'] = 'Leave the quiz';
 $string['settings_info_heading'] = 'Configuration';
-$string['settings_info_desc'] = 'Main proctoring, storage, RUT and identity settings are in <a href="/admin/settings.php?section=local_moodle_proctor_settings">Local plugins → Moodle Proctor</a>.';
+$string['settings_info_desc'] = 'Main proctoring, storage, RUT and identity settings are in <a href="/admin/settings.php?section=local_moodle_proctor_settings">Local plugins → Proctor Chile</a>.';
 $string['extension_missing'] = 'This exam requires the proctoring browser extension and it is not responding. Install or enable it and reload the page to continue.';
 $string['webcam_required'] = 'This exam requires your camera. Allow camera access to continue.';
 $string['webcam_retry'] = 'Allow camera';
 $string['focus_away_seconds'] = 'Was away from the exam window for {$a} s.';
-$string['proctorsection'] = 'Proctoring (Moodle Proctor)';
+$string['proctorsection'] = 'Proctoring (Proctor Chile)';
 $string['rules_heading'] = 'What to do on each incident';
 $string['rules_intro'] = 'For each kind of incident choose what happens and from which occurrence in the same attempt. <strong>Record only</strong>: it stays in the report. <strong>Notify</strong>: also alerts the teacher and the student (Moodle message and email) and keeps the evidence. <strong>Block the exam</strong>: also blocks the attempt; the student cannot continue until a teacher, manager or administrator reviews the evidence and gives another chance.';
 $string['rule_action_log'] = 'Record only';

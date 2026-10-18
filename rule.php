@@ -1,9 +1,18 @@
 <?php
 // This file is part of Moodle - http://moodle.org/
 //
-// @package    quizaccess_moodle_proctor
-// @copyright  2026 John Rivera
-// @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -16,12 +25,24 @@ use mod_quiz\quiz_settings;
 
 /**
  * Quiz access rule for Moodle Proctor.
+ *
+ * @copyright  2026 John Rivera <https://github.com/Johnrivera7>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quizaccess_moodle_proctor extends access_rule_base {
-
     /** @var stdClass|null */
     protected $proctorsettings;
 
+    /**
+     * Return an instance of this rule when proctoring is required for the quiz and the
+     * Moodle Proctor local plugin is configured, otherwise null.
+     *
+     * @param quiz_settings $quizobj information about the quiz in question.
+     * @param int $timenow the time that should be considered as 'now'.
+     * @param bool $canignoretimelimits whether the current user is exempt from
+     *      time limits by the mod/quiz:ignoretimelimits capability.
+     * @return access_rule_base|null the rule, if applicable, else null.
+     */
     public static function make(quiz_settings $quizobj, $timenow, $canignoretimelimits): ?access_rule_base {
         if (empty($quizobj->get_quiz()->proctoringrequired)) {
             return null;
@@ -46,7 +67,7 @@ class quizaccess_moodle_proctor extends access_rule_base {
     public static function add_settings_form_fields(mod_quiz_mod_form $quizform, MoodleQuickForm $mform): void {
         global $DB;
         $before = $mform->elementExists('timing') ? 'timing' : null;
-        $add = function(HTML_QuickForm_element $element) use ($mform, $before) {
+        $add = function (HTML_QuickForm_element $element) use ($mform, $before) {
             if ($before) {
                 $mform->insertElementBefore($element, $before);
             } else {
@@ -60,7 +81,11 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $add($mform->createElement('header', 'moodleproctorhdr', get_string('proctorsection', 'quizaccess_moodle_proctor')));
         $mform->setExpanded('moodleproctorhdr', $enabled);
 
-        $add($mform->createElement('selectyesno', 'proctoringrequired', get_string('proctoringrequired', 'quizaccess_moodle_proctor')));
+        $add($mform->createElement(
+            'selectyesno',
+            'proctoringrequired',
+            get_string('proctoringrequired', 'quizaccess_moodle_proctor')
+        ));
         $mform->addHelpButton('proctoringrequired', 'proctoringrequired', 'quizaccess_moodle_proctor');
         $mform->setDefault('proctoringrequired', 0);
 
@@ -72,18 +97,30 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $mform->setDefault('requireextension', 0);
         $mform->hideIf('requireextension', 'proctoringrequired', 'eq', 0);
 
-        $add($mform->createElement('selectyesno', 'requirefullscreen', get_string('requirefullscreen', 'quizaccess_moodle_proctor')));
+        $add($mform->createElement(
+            'selectyesno',
+            'requirefullscreen',
+            get_string('requirefullscreen', 'quizaccess_moodle_proctor')
+        ));
         $mform->setDefault('requirefullscreen', 1);
         $mform->addHelpButton('requirefullscreen', 'requirefullscreen', 'quizaccess_moodle_proctor');
         $mform->hideIf('requirefullscreen', 'proctoringrequired', 'eq', 0);
 
-        $add($mform->createElement('selectyesno', 'requirescreenshare', get_string('requirescreenshare', 'quizaccess_moodle_proctor')));
+        $add($mform->createElement(
+            'selectyesno',
+            'requirescreenshare',
+            get_string('requirescreenshare', 'quizaccess_moodle_proctor')
+        ));
         $mform->setDefault('requirescreenshare', 0);
         $mform->addHelpButton('requirescreenshare', 'requirescreenshare', 'quizaccess_moodle_proctor');
         $mform->hideIf('requirescreenshare', 'proctoringrequired', 'eq', 0);
 
-        $add($mform->createElement('static', 'proctorrulesintro', get_string('rules_heading', 'quizaccess_moodle_proctor'),
-            get_string('rules_intro', 'quizaccess_moodle_proctor')));
+        $add($mform->createElement(
+            'static',
+            'proctorrulesintro',
+            get_string('rules_heading', 'quizaccess_moodle_proctor'),
+            get_string('rules_intro', 'quizaccess_moodle_proctor')
+        ));
         $mform->hideIf('proctorrulesintro', 'proctoringrequired', 'eq', 0);
 
         $actions = [
@@ -100,12 +137,23 @@ class quizaccess_moodle_proctor extends access_rule_base {
             foreach (range(1, 20) as $n) {
                 $counts[$n] = get_string($optionkey, 'quizaccess_moodle_proctor', $n);
             }
-            $group = $mform->createElement('group', 'proctorrule_' . $key,
-                get_string('rule_' . $key, 'quizaccess_moodle_proctor'), [
+            $group = $mform->createElement(
+                'group',
+                'proctorrule_' . $key,
+                get_string('rule_' . $key, 'quizaccess_moodle_proctor'),
+                [
                     $mform->createElement('select', $actionname, '', $actions),
-                    $mform->createElement('static', $aftername . '_label', '', get_string('rule_after', 'quizaccess_moodle_proctor')),
+                    $mform->createElement(
+                        'static',
+                        $aftername . '_label',
+                        '',
+                        get_string('rule_after', 'quizaccess_moodle_proctor')
+                    ),
                     $mform->createElement('select', $aftername, '', $counts),
-                ], ' ', false);
+                ],
+                ' ',
+                false
+            );
             $add($group);
             $mform->setType($aftername, PARAM_INT);
             $mform->setDefault($actionname, $rules[$key]['action']);
@@ -116,6 +164,13 @@ class quizaccess_moodle_proctor extends access_rule_base {
         }
     }
 
+    /**
+     * Save the proctoring settings and incident rules when the quiz settings form is submitted.
+     * The settings row is removed when proctoring is turned off.
+     *
+     * @param stdClass $quiz the data from the quiz form, including $quiz->id
+     *      which is the id of the quiz being saved.
+     */
     public static function save_settings($quiz): void {
         global $DB;
         $record = $DB->get_record('quizaccess_moodle_proctor', ['quizid' => $quiz->id]);
@@ -148,11 +203,23 @@ class quizaccess_moodle_proctor extends access_rule_base {
         }
     }
 
+    /**
+     * Delete the proctoring settings when the quiz is deleted.
+     *
+     * @param stdClass $quiz the data from the database, including $quiz->id
+     *      which is the id of the quiz being deleted.
+     */
     public static function delete_settings($quiz): void {
         global $DB;
         $DB->delete_records('quizaccess_moodle_proctor', ['quizid' => $quiz->id]);
     }
 
+    /**
+     * Return the bits of SQL needed to load the proctoring settings with the other quiz settings.
+     *
+     * @param int $quizid the id of the quiz we are loading settings for.
+     * @return array with three elements: fields to add to the select list, joins and params.
+     */
     public static function get_settings_sql($quizid): array {
         return [
             'proctor.proctoringrequired, proctor.requirewebcam, proctor.requireextension, '
@@ -162,6 +229,12 @@ class quizaccess_moodle_proctor extends access_rule_base {
         ];
     }
 
+    /**
+     * Tell users the quiz is proctored. Staff with the viewreports capability also get
+     * a link to the blocked attempts of this quiz.
+     *
+     * @return array messages explaining the restriction.
+     */
     public function description(): array {
         global $DB;
         $lines = [];
@@ -171,13 +244,17 @@ class quizaccess_moodle_proctor extends access_rule_base {
         if (has_capability('local/moodle_proctor:viewreports', $context)) {
             $blocked = $DB->count_records_sql(
                 'SELECT COUNT(DISTINCT attemptid) FROM {local_moodle_proctor_violation} WHERE quizid = ? AND status = ?',
-                [(int) $this->quiz->id, \local_moodle_proctor\violation_manager::STATUS_BLOCKED]);
+                [(int) $this->quiz->id, \local_moodle_proctor\violation_manager::STATUS_BLOCKED]
+            );
             $url = new moodle_url('/local/moodle_proctor/violations.php', [
                 'courseid' => (int) $this->quizobj->get_course()->id,
                 'quizid' => (int) $this->quiz->id,
             ]);
-            $lines[] = html_writer::link($url, get_string('staff_violations_link', 'quizaccess_moodle_proctor', $blocked),
-                ['class' => $blocked ? 'btn btn-danger btn-sm' : 'btn btn-outline-secondary btn-sm']);
+            $lines[] = html_writer::link(
+                $url,
+                get_string('staff_violations_link', 'quizaccess_moodle_proctor', $blocked),
+                ['class' => $blocked ? 'btn btn-danger btn-sm' : 'btn btn-outline-secondary btn-sm']
+            );
         }
         return $lines;
     }
@@ -220,10 +297,26 @@ class quizaccess_moodle_proctor extends access_rule_base {
         return \local_moodle_proctor\violation_manager::block_message($block);
     }
 
+    /**
+     * Block access while there is an unreleased integrity violation or identity
+     * verification is pending.
+     *
+     * @return string|false false if access should be allowed, a message explaining the
+     *      reason if access should be prevented.
+     */
     public function prevent_access(): string|false {
         return $this->get_violation_block_message() ?: ($this->get_enrollment_block_message() ?: false);
     }
 
+    /**
+     * Block new attempts while there is an unreleased integrity violation or identity
+     * verification is pending.
+     *
+     * @param int $numprevattempts the number of previous attempts this user has made.
+     * @param stdClass $lastattempt information about the user's last completed attempt.
+     * @return string|false false if access should be allowed, a message explaining the
+     *      reason if access should be prevented.
+     */
     public function prevent_new_attempt($numprevattempts, $lastattempt): string|false {
         return $this->get_violation_block_message() ?: ($this->get_enrollment_block_message() ?: false);
     }
@@ -240,16 +333,34 @@ class quizaccess_moodle_proctor extends access_rule_base {
         return empty($SESSION->quizaccess_moodle_proctor_consented[$this->quiz->id]);
     }
 
+    /**
+     * Remember in the session that the student gave consent for this quiz.
+     *
+     * @param int|null $attemptid the id of the current attempt, if there is one,
+     *      otherwise null.
+     */
     public function notify_preflight_check_passed($attemptid): void {
         global $SESSION;
         $SESSION->quizaccess_moodle_proctor_consented[$this->quiz->id] = true;
     }
 
+    /**
+     * Clear the consent flag from the session when the current attempt is finished.
+     */
     public function current_attempt_finished(): void {
         global $SESSION;
         unset($SESSION->quizaccess_moodle_proctor_consented[$this->quiz->id]);
     }
 
+    /**
+     * Add the consent text and checkbox to the pre-flight check form, or the identity
+     * verification message when the student has not completed it.
+     *
+     * @param preflight_check_form $quizform the form being built.
+     * @param MoodleQuickForm $mform The wrapped MoodleQuickForm.
+     * @param int|null $attemptid the id of the current attempt, if there is one,
+     *      otherwise null.
+     */
     public function add_preflight_check_form_fields(preflight_check_form $quizform, MoodleQuickForm $mform, $attemptid): void {
         $blockmessage = $this->get_enrollment_block_message();
         if ($blockmessage) {
@@ -265,6 +376,16 @@ class quizaccess_moodle_proctor extends access_rule_base {
         $mform->addElement('advcheckbox', 'proctorconsent', get_string('preflight_consent', 'quizaccess_moodle_proctor'));
     }
 
+    /**
+     * Require the consent checkbox, and refuse the form while identity verification is pending.
+     *
+     * @param array $data the submitted form data.
+     * @param array $files any files in the submission.
+     * @param array $errors the list of validation errors that is being built up.
+     * @param int|null $attemptid the id of the current attempt, if there is one,
+     *      otherwise null.
+     * @return array the updated $errors array.
+     */
     public function validate_preflight_check($data, $files, $errors, $attemptid): array {
         $blockmessage = $this->get_enrollment_block_message();
         if ($blockmessage) {
@@ -279,6 +400,11 @@ class quizaccess_moodle_proctor extends access_rule_base {
         return $errors;
     }
 
+    /**
+     * Load the proctoring JavaScript and styles on the attempt page.
+     *
+     * @param moodle_page $page the page object to initialise.
+     */
     public function setup_attempt_page($page): void {
         if ($page->pagetype !== 'mod-quiz-attempt') {
             return;

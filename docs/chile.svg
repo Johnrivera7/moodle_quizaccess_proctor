@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1500 1000" width="30" height="20">
+  <title>Chile</title>
+  <rect width="1500" height="1000" fill="#d52b1e"/>
+  <rect width="1500" height="500" fill="#fff"/>
+  <rect width="500" height="500" fill="#0039a6"/>
+  <polygon points="250.0,125.0 278.1,211.4 368.9,211.4 295.4,264.8 323.5,351.1 250.0,297.7 176.5,351.1 204.6,264.8 131.1,211.4 221.9,211.4" fill="#fff"/>
+</svg>

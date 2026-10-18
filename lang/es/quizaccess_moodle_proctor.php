@@ -1,11 +1,34 @@
 <?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Strings for component 'quizaccess_moodle_proctor', language 'es'.
+ *
+ * @package    quizaccess_moodle_proctor
+ * @copyright  2026 John Rivera <https://github.com/Johnrivera7>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 defined('MOODLE_INTERNAL') || die();
 
-$string['pluginname'] = 'Regla de acceso Moodle Proctor';
+$string['pluginname'] = 'Regla de acceso Proctor Chile';
 $string['privacy:metadata'] = 'La regla de acceso no almacena datos personales. Los datos los guarda local_moodle_proctor.';
 
 $string['proctoringrequired'] = 'Habilitar supervisión';
-$string['proctoringrequired_help'] = 'Requiere Moodle Proctor (local_moodle_proctor) instalado y configurado. Captura imágenes de webcam durante el intento y registra incidencias.';
+$string['proctoringrequired_help'] = 'Requiere Proctor Chile (local_moodle_proctor) instalado y configurado. Captura imágenes de webcam durante el intento y registra incidencias.';
 $string['proctoringenabled'] = 'La supervisión está habilitada para este cuestionario';
 $string['requirewebcam'] = 'Requerir cámara';
 $string['requireextension'] = 'Requerir extensión del navegador';
@@ -25,12 +48,12 @@ $string['identity_verified'] = 'Identidad verificada correctamente.';
 $string['identity_retry'] = 'Reintentar';
 $string['identity_leave'] = 'Salir del cuestionario';
 $string['settings_info_heading'] = 'Configuración';
-$string['settings_info_desc'] = 'La configuración principal de supervisión, almacenamiento, RUT y verificación de identidad está en <a href="/admin/settings.php?section=local_moodle_proctor_settings">Plugins locales → Moodle Proctor</a>.';
+$string['settings_info_desc'] = 'La configuración principal de supervisión, almacenamiento, RUT y verificación de identidad está en <a href="/admin/settings.php?section=local_moodle_proctor_settings">Plugins locales → Proctor Chile</a>.';
 $string['extension_missing'] = 'Este examen requiere la extensión de supervisión del navegador y no responde. Instálela o actívela y recargue la página para continuar.';
 $string['webcam_required'] = 'Este examen requiere la cámara. Permita el acceso a la cámara para continuar.';
 $string['webcam_retry'] = 'Permitir cámara';
 $string['focus_away_seconds'] = 'Estuvo {$a} s fuera de la ventana del examen.';
-$string['proctorsection'] = 'Supervisión (Moodle Proctor)';
+$string['proctorsection'] = 'Supervisión (Proctor Chile)';
 $string['rules_heading'] = 'Qué hacer ante cada incidente';
 $string['rules_intro'] = 'Para cada tipo de incidente elija qué pasa y desde cuántas veces durante el mismo intento. <strong>Solo registrar</strong>: queda en el informe. <strong>Notificar</strong>: además avisa al docente y al estudiante (mensaje en Moodle y correo) y guarda la evidencia. <strong>Bloquear el examen</strong>: además bloquea el intento; el estudiante no puede seguir hasta que un docente, gestor o administrador revise la evidencia y le conceda otra oportunidad.';
 $string['rule_action_log'] = 'Solo registrar';
